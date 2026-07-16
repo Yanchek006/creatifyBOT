@@ -21,10 +21,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# --- КОНФИГУРАЦИЯ ---
 TOKEN = "8956581254:AAEfx3P42nb10QiDDv5HJjyBvCYLJwid0f8"
-CHAT_ID = "995444571"
+CHAT_ID = "8956581254"
+YOUR_ID = "995444571"  # ВАШ TELEGRAM ID (куда будут приходить заявки)
 
-# --- СОЗДАЕМ БОТА БЕЗ ДОПОЛНИТЕЛЬНЫХ СЕССИЙ (ПРОСТОЙ ВАРИАНТ) ---
+# --- СОЗДАЕМ БОТА ---
 try:
     bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
     logger.info("✅ Бот успешно инициализирован")
@@ -36,14 +38,20 @@ dp = Dispatcher()
 
 # Хранилище прогресса пользователей
 user_progress = {}
+# Хранилище для временных данных анкеты
+user_forms = {}
 
 # --- КЛАВИАТУРА ---
 main_kb = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="🎓 Начать обучение")],
-        [KeyboardButton(text="📚 Мои подарки"), KeyboardButton(text="📞 Связаться")],
+        [
+            KeyboardButton(text="📚 Мои подарки"),
+            KeyboardButton(text="📋 Оставить заявку"),
+        ],
         [
             KeyboardButton(text="💡 Полезная информация"),
+            KeyboardButton(text="📞 Связаться"),
             KeyboardButton(text="🌐 На сайт"),
         ],
     ],
@@ -60,11 +68,12 @@ async def start(message: Message):
 
     await message.answer(
         "🧙‍♂️ <b>Добро пожаловать в CREATIFY!</b>\n\n"
-        "Я помогу тебе прокачать навыки в дизайне.\n\n"
+        "Я твой личный помощник и тренажёр по дизайну.\n\n"
         "🎓 <b>«Начать обучение»</b> — интерактивный квест из 9 заданий\n"
         "📚 <b>«Мои подарки»</b> — чек-лист и шаблоны\n"
         "💡 <b>«Полезная информация»</b> — советы и лайфхаки\n"
-        "🌐 <b>«На сайт»</b> — перейти на сайт CREATIFY\n\n"
+        "🌐 <b>«На сайт»</b> — перейти на сайт CREATIFY\n"
+        "📋 <b>«Оставить заявку»</b> — свяжись с нами по услугам\n\n"
         "👇 Выбери, с чего начнём!",
         reply_markup=main_kb,
     )
@@ -1048,6 +1057,156 @@ async def info_lifehacks(callback: CallbackQuery):
         "👉 Подробнее: @AvoError"
     )
     await callback.answer()
+
+
+# ============================================
+# АССИСТЕНТ: СБОР ЗАЯВОК
+# ============================================
+@dp.message(lambda message: message.text == "📋 Оставить заявку")
+async def start_form(message: Message):
+    user_id = message.from_user.id
+    user_forms[user_id] = {}  # Инициализируем пустой словарь для ответов
+    await message.answer(
+        "📋 <b>АССИСТЕНТ CREATIFY</b>\n\n"
+        "Привет! Я — твой личный помощник. Давай соберем заявку на услугу.\n\n"
+        "👇 <b>Шаг 1 из 5</b>\n"
+        "Как я могу к тебе обращаться? Напиши своё имя:"
+    )
+
+
+@dp.message(
+    lambda message: message.from_user.id in user_forms
+    and "name" not in user_forms[message.from_user.id]
+)
+async def process_name(message: Message):
+    user_id = message.from_user.id
+    user_forms[user_id]["name"] = message.text
+    await message.answer(
+        "Отлично! 👋\n👇 <b>Шаг 2 из 5</b>\nТеперь укажи свой email для связи:"
+    )
+
+
+@dp.message(
+    lambda message: message.from_user.id in user_forms
+    and "email" not in user_forms[message.from_user.id]
+)
+async def process_email(message: Message):
+    user_id = message.from_user.id
+    user_forms[user_id]["email"] = message.text
+    await message.answer(
+        "Принято! 📧\n👇 <b>Шаг 3 из 5</b>\nУкажи свой номер телефона:"
+    )
+
+
+@dp.message(
+    lambda message: message.from_user.id in user_forms
+    and "phone" not in user_forms[message.from_user.id]
+)
+async def process_phone(message: Message):
+    user_id = message.from_user.id
+    user_forms[user_id]["phone"] = message.text
+
+    # Кнопки для выбора типа услуги
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🎨 Дизайн сайта", callback_data="service_site"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="🤖 Разработка бота", callback_data="service_bot"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="📦 Дизайн упаковки", callback_data="service_pack"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="💼 Консультация", callback_data="service_consult"
+                )
+            ],
+            [InlineKeyboardButton(text="✏️ Другое", callback_data="service_other")],
+        ]
+    )
+    await message.answer(
+        "Спасибо! 📞\n"
+        "👇 <b>Шаг 4 из 5</b>\n"
+        "Выбери тип услуги, которая тебя интересует:",
+        reply_markup=kb,
+    )
+
+
+@dp.callback_query(lambda callback: callback.data.startswith("service_"))
+async def process_service(callback: CallbackQuery):
+    user_id = callback.from_user.id
+    if user_id not in user_forms:
+        await callback.answer(
+            "Что-то пошло не так. Начните заявку заново.", show_alert=True
+        )
+        return
+
+    service_map = {
+        "service_site": "🎨 Дизайн сайта",
+        "service_bot": "🤖 Разработка бота",
+        "service_pack": "📦 Дизайн упаковки",
+        "service_consult": "💼 Консультация",
+        "service_other": "✏️ Другое",
+    }
+    user_forms[user_id]["service"] = service_map.get(callback.data, "Не указано")
+
+    await callback.message.delete()
+    await callback.message.answer(
+        "Выбрано! ✅\n"
+        "👇 <b>Шаг 5 из 5 (финальный)</b>\n"
+        "Опиши свою задачу подробнее. Чем я могу тебе помочь?"
+    )
+    await callback.answer()
+
+
+@dp.message(
+    lambda message: message.from_user.id in user_forms
+    and "service" in user_forms[message.from_user.id]
+    and "message" not in user_forms[message.from_user.id]
+)
+async def process_final_message(message: Message):
+    user_id = message.from_user.id
+    form_data = user_forms[user_id]
+    form_data["message"] = message.text
+
+    # Формируем красивое сообщение для вас
+    report = (
+        "📋 <b>НОВАЯ ЗАЯВКА!</b>\n\n"
+        f"👤 <b>Имя:</b> {form_data['name']}\n"
+        f"📧 <b>Email:</b> {form_data['email']}\n"
+        f"📞 <b>Телефон:</b> {form_data['phone']}\n"
+        f"📌 <b>Услуга:</b> {form_data['service']}\n"
+        f"💬 <b>Сообщение:</b>\n{form_data['message']}"
+    )
+
+    try:
+        # Отправляем заявку вам в личные сообщения
+        await bot.send_message(chat_id=YOUR_ID, text=report)
+        await message.answer(
+            "✅ <b>Заявка успешно отправлена!</b>\n\n"
+            "Спасибо! Я передал твои данные команде CREATIFY. \n"
+            "Мы свяжемся с тобой в ближайшее время. Обычно это занимает не более 24 часов.\n\n"
+            "А пока можешь вернуться в главное меню или продолжить обучение!",
+            reply_markup=main_kb,
+        )
+        logger.info(f"Новая заявка от {form_data['name']}")
+    except Exception as e:
+        logger.error(f"Ошибка при отправке заявки вам в личку: {e}")
+        await message.answer(
+            "⚠️ <b>Произошла ошибка.</b>\n"
+            "Твоя заявка не была отправлена. Пожалуйста, свяжись с нами напрямую: @AvoError"
+        )
+
+    # Очищаем временные данные
+    del user_forms[user_id]
 
 
 # ============================================
