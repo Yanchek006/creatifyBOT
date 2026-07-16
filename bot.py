@@ -16,10 +16,8 @@ from aiogram.types import (
 # --- НАСТРОЙКА ЛОГИРОВАНИЯ ---
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
 
@@ -51,6 +49,7 @@ main_kb = ReplyKeyboardMarkup(
     ],
     resize_keyboard=True,
 )
+
 
 # ============================================
 # СТАРТ
@@ -209,7 +208,6 @@ async def show_progress(callback: CallbackQuery):
         f"📊 <b>Твой прогресс</b>\n\n"
         f"✅ Пройдено заданий: {step}/9\n"
         f"⭐ Набрано баллов: {score}\n\n"
-        f"{'🔥 Ты на пути к профи!' if step >= 5 else '💪 Продолжай в том же духе!'}"
     )
     await callback.answer()
 
@@ -288,7 +286,9 @@ async def quest_1_answer(callback: CallbackQuery):
         user_progress[user_id]["score"] += 1
         text = "✅ <b>Верно!</b> Объясни клиенту, почему ты сделал так — это твоя суперсила!"
     else:
-        text = "❌ <b>Ошибка!</b> Не переделывай всё с нуля — объясни свой выбор клиенту."
+        text = (
+            "❌ <b>Ошибка!</b> Не переделывай всё с нуля — объясни свой выбор клиенту."
+        )
 
     user_progress[user_id]["step"] = 1
 
@@ -349,9 +349,13 @@ async def quest_2_answer(callback: CallbackQuery):
 
     if callback.data == "q2_right":
         user_progress[user_id]["score"] += 1
-        text = "✅ <b>Верно!</b> Бриф — спасение от 100 правок! 5 вопросов спасут нервы."
+        text = (
+            "✅ <b>Верно!</b> Бриф — спасение от 100 правок! 5 вопросов спасут нервы."
+        )
     else:
-        text = "❌ <b>Ошибка!</b> Без брифа ты утонешь в правках. Всегда запрашивай бриф!"
+        text = (
+            "❌ <b>Ошибка!</b> Без брифа ты утонешь в правках. Всегда запрашивай бриф!"
+        )
 
     user_progress[user_id]["step"] = 2
 
@@ -668,7 +672,9 @@ async def quest_7_answer(callback: CallbackQuery):
 
     if callback.data == "q7_right":
         user_progress[user_id]["score"] += 1
-        text = "✅ <b>Верно!</b> Контраст — это читаемость. Без него пользователь уйдёт!"
+        text = (
+            "✅ <b>Верно!</b> Контраст — это читаемость. Без него пользователь уйдёт!"
+        )
     else:
         text = "❌ <b>Ошибка!</b> Контраст — основа юзабилити. Всегда проверяй!"
 
